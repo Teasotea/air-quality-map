@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+venv/
+venvpy/
+venvpy12/
+.venv/
+ENV/
+
+# Jupyter and notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local data, cache, and temp
+*.sqlite3
+*.db
+*.tmp
+*.cache/
+tmp/
+
+# Lock and build files
+uv.lock
+*.egg-info/
+dist/
+build/
+
+# Images and outputs
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.svg
+
+# Misc
+*.swp
+*.bak
+
+# Ignore research outputs
+research/*.csv
+research/*.fits
+research/*.h5
