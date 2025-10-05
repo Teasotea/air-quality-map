@@ -1,68 +1,96 @@
-# Exosky! NASA Space Apps Challenge 2024
+# AirVision 🌍  
 
-A solution for [Exosky!](https://www.spaceappschallenge.org/nasa-space-apps-2024/challenges/exosky/?tab=details) challenge made by the team LazyVarenyky (@andrii0yerko, @Teasotea) during the NASA Space Apps Challenge 2024 hackathon, 5-6 October 2024.
+*A solution for [From EarthData to Action: Cloud Computing with Earth Observation Data for Predicting Cleaner, Safer Skies](https://www.spaceappschallenge.org/2025/challenges/from-earthdata-to-action-cloud-computing-with-earth-observation-data-for-predicting-cleaner-safer-skies)*  
+Developed by **Team RandomStorm** (@Teasotea, @andrii0yerko) during the **NASA Space Apps Challenge 2025**, 4–5 October 2025.
 
-The solution was made in the form of a web application, that allows plotting 2D projection of the star sky from the perspective of various exoplanets from the NASA datasets.
+---
 
+## 🌍 PROJECT DETAILS  
 
-## PROJECT DEMO
+**AirVision** is a web application that visualizes **real-time air quality** by combining **NASA TEMPO satellite data** with **ground-based OpenAQ sensor data**.  
+The platform helps users understand their local air quality, receive forecasts such as *Good*, *Moderate*, or *Unhealthy*, and get alerts when pollution levels increase.
 
-- https://youtu.be/y_Ap1gsBJ70
-- https://www.spaceappschallenge.org/nasa-space-apps-2024/find-a-team/lazyvarenyky/?tab=project
+Our goal is to bridge **satellite Earth observation data** and **everyday public awareness**, transforming complex data into actionable insights for citizens, policymakers, and educators.
 
-## PROJECT DETAILS
+![airvision_demo](https://github.com/user-attachments/assets/airvision_demo_placeholder.png)
 
-Our project aims to bring a unique perspective to stargazing by allowing users to visualize the star sky from the view point of various exoplanets. Using data from the GAIA DR3 dataset and the NASA Exoplanet Archive, we've developed a Python web application that reprojects stars’ positions and characteristics based on an exoplanet's location.
-![demo_2](https://github.com/user-attachments/assets/adc3331d-64d3-4772-a63c-fa2ef2441998)
+---
 
-**Features**
+### ✨ Features  
 
-Our application features a set of tools for building the star sky vizualization in the form of a 2D plot:
-1. **Dynamic Sky Projection**: Visualizes the star sky from either Earth's or an exoplanet's perspective, with a choice between Mollweide or Mercator projections.
-2. **Exoplanet Filtering**: Filters the list of exoplanets by their distance from the Solar System, helping users focus on planets within a specific range.
-3. **Earth's Position Indicator**: Shows the Earth's location when viewing the star sky from other exoplanets.
-4. **Interactive Constellation Drawing**: Allows users to map constellations interactively on the star sky.
+1. **Integrated Air Quality Dashboard** – Displays real-time PM2.5, NO₂, and O₃ readings from OpenAQ alongside satellite-based pollution data from NASA TEMPO.  
+2. **City-Level Search & Forecast** – Allows users to search any city or coordinates and receive a forecast labeled “Good / Moderate / Unhealthy.”  
+3. **Satellite–Ground Comparison View** – Side-by-side visualization of satellite vs. ground-level measurements for data validation and context.  
+4. **Health Alerts & Recommendations** – Simple, color-coded alerts to help users make informed outdoor activity decisions.  
+5. **Offline Sample Mode** – Includes a sample dataset (`data/sample_data.json`) for instant visualization testing without API calls.
 
-**Technical details**
-We primarily utilize the following data sources and columns:
-- **GAIA DR3 Dataset**: Includes *right ascension (ra)*, *declination (dec)*, *parallax* (for distance calculations), *phot_g_mean_mag* (used to set star sizes, as a proxy value to vizualize brightness), and *bp_rp* (used to infer star color).
-- **NASA Exoplanet Archive**: Provides *right ascension (ra)*, *declination (dec)*, and *sy_dist* (distance from the Solar System), allowing us to have an observation points to choose from, and to reposition GAIA data relative to an exoplanet’s coordinates.
+---
 
+### 🧠 Technical Details  
 
-Through this project, we tackled a range of challenges and complexities:
-1. **Data Integration and Unit Conversion**: Integrated datasets with different measurement units and formats to provide a seamless visualization.
-2. **Astronomical Geometry Computation**: Calculated the relative positions using coordinate transformations and apparent magnitudes of stars when viewed from exoplanets, handling complex astronomical geometry, and conversion between different coordinate systems.
-2. **Outlier Management**: Addressed plot-distorting outliers, such as stars from the host system of the exoplanet itself, which could skew visual clarity.
-3. **Aesthetic and Realistic Plotting**: Mapped magnitude and color values realistically to create visually appealing yet preserve properties representations based on the actual data.
+We primarily use:  
 
-**Future Enhancements**
+- **OpenAQ API** – Live ground sensor data (PM2.5, NO₂, O₃).  
+- **NASA TEMPO (Tropospheric Emissions: Monitoring of Pollution)** – Column-level satellite NO₂ and aerosol data for the North American region.  
 
-To elevate the user experience and scientific accuracy, the next steps will be to introduce additional features:
-1. **Enhanced Interactivity**: Enable users to zoom in on specific sky regions for detailed views.
-2. **Atmospheric Effects**: Incorporate atmospheric properties of the selected planet, adjusting visual effects to simulate local conditions.
-3. **Extended Accuracy for Distant Objects**: Refine star data for exoplanets located at far distances.
-4. **3D Model Visualization**: Offer a 3D view mode for an immersive spatial understanding of star fields.
+**Core stack:**  
 
+- `Python` + `Streamlit` – Web app engine and UI.  
+- `Prophet` – Simple forecasting for short-term AQI prediction.  
+- `Pydantic` – Data validation layer for OpenAQ & satellite inputs.
 
-## USE OF ARTIFICIAL INTELLIGENCE
+---
 
-We used ChatGPT & Github Copilot for development acceleration
+### 🧩 Challenges Tackled  
 
-## SPACE AGENCY DATA
+1. **Data Harmonization:** Aligning units and timestamps between OpenAQ and NASA datasets.  
+2. **Lightweight Architecture:** Building a demo that works both locally and in the cloud (Streamlit + REST APIs).  
+3. **Usability:** Simplifying air quality indices into accessible messages and visual cues for everyday users.  
+4. **Forecast Modeling:** Implementing a minimal prediction model using Prophet for AQI trends.  
 
-- [NASA Exoplanet Archive Planetary Systems Composite Data (through astroquery)](https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=PSCompPars)
-- [GAIA Data Release 3 (through astroquery)](https://www.cosmos.esa.int/web/gaia/data-release-3)
+---
 
+### 🚀 Future Enhancements  
 
-## REFERENCES
+1. Add **weather data** (wind, humidity) to refine forecasts.  
+2. Build **mobile alerts and notifications**.  
+3. Expand **region coverage** beyond North America.  
+4. Deploy scalable **cloud version (Azure/AWS)** for global use.  
+5. Include **historical air quality trend visualizations**.
 
-Python libraries used for development:
-- https://astroquery.readthedocs.io/en/latest/ - handy wrapper for access to the datasets
-- https://www.astropy.org/ - for ease of the astronomical math
-- https://matplotlib.org/ - visualization engine
-- https://streamlit.io/ - web-app engine
+---
 
-Other resources:
-- https://viyaleta.medium.com/how-to-make-a-sky-map-in-python-a362bf722bb2
-- https://astronomy.stackexchange.com/questions/54280/how-to-get-star-position-from-the-gaia-data-set
-- https://www.omnicalculator.com/physics/luminosity
+## 🤖 USE OF ARTIFICIAL INTELLIGENCE  
+
+We used **ChatGPT (GPT-5)** and **GitHub Copilot** to accelerate development and documentation.  
+Forecasting was powered by **Prophet**, an open-source ML model for time series prediction.
+
+---
+
+## 🛰️ SPACE AGENCY DATA  
+
+- [OpenAQ API](https://docs.openaq.org) – Ground air quality sensors (PM2.5, NO₂, O₃).  
+- [NASA TEMPO Data](https://asdc.larc.nasa.gov/project/TEMPO) – Satellite pollution monitoring.  
+
+---
+
+## 📚 REFERENCES  
+
+**Python libraries used:**  
+
+- [Streamlit](https://streamlit.io/) – Web app engine  
+- [Prophet](https://facebook.github.io/prophet/) – Forecasting model  
+- [Folium](https://python-visualization.github.io/folium/) – Interactive maps  
+- [OpenAQ Python SDK](https://github.com/openaq/openaq-api-client) – Air quality API  
+- [Pydantic](https://docs.pydantic.dev/) – Data models  
+
+**Other resources:**  
+
+- [NASA EarthData TEMPO Portal](https://asdc.larc.nasa.gov/project/TEMPO)  
+- [WHO Air Quality Guidelines 2021](https://www.who.int/news-room/fact-sheets/detail/ambient-(outdoor)-air-quality-and-health)
+
+---
+
+## 📜 LICENSE  
+
+This project was created for the **NASA Space Apps Challenge 2025** and is open-sourced for educational and research use.  

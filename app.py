@@ -1,120 +1,183 @@
-import streamlit as st
-import json
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+import streamlit as st
+from dotenv import load_dotenv
 
+from api.locations import get_ground_data_by_location_id, get_locations_by_coord
+from api.predictions import AirQualityPredictor
+
+# from api.models import Location
+
+load_dotenv()
 # --- Title ---
 st.set_page_config(page_title="Air Quality Dashboard", layout="wide")
-st.title("🌍 Air Quality Dashboard (NASA + OpenAQ MVP)")
+st.title("🌍 Air Quality Dashboard (OpenAQ)")
 
-# --- Load sample data ---
-with open("data/sample_data.json") as f:
-    data = json.load(f)
+# Initialize the predictor
+predictor = AirQualityPredictor(client=None)  # Pass the OpenAQ client if needed
 
-# --- Display city info ---
-city = data["location"]["city"]
-country = data["location"]["country"]
-st.subheader(f"{city}, {country}")
-st.write(f"Data timestamp: {data['timestamp']}")
+# --- Location Search ---
+st.subheader("🔍 Search Location")
+col1, col2, col3 = st.columns(3)
 
-# --- Display combined AQ info ---
-aq_category = data["combined_analysis"]["category"]
-aq_index = data["combined_analysis"]["air_quality_index"]
-recommendation = data["combined_analysis"]["recommendation"]
-
-st.markdown(f"**Air Quality Index (AQI):** {aq_index}")
-st.markdown(f"**Category:** {aq_category}")
-st.info(recommendation)
-
-# --- Display ground data ---
-ground = data["ground_data"]["parameters"]
-ground_df = pd.DataFrame({
-    "Pollutant": ["PM2.5", "NO₂", "O₃"],
-    "Value": [ground["pm25"]["value"], ground["no2"]["value"], ground["o3"]["value"]],
-    "Unit": [ground["pm25"]["unit"], ground["no2"]["unit"], ground["o3"]["unit"]]
-})
-
-st.subheader("📊 Ground Measurements (OpenAQ)")
-st.dataframe(ground_df)
-
-# Bar chart
-fig = px.bar(
-    ground_df,
-    x="Pollutant",
-    y="Value",
-    color="Pollutant",
-    text="Value",
-    labels={"Value": "Concentration"},
-    title="Ground-level Air Pollutants"
-)
-st.plotly_chart(fig, use_container_width=True)
-
-# --- Display satellite data ---
-sat = data["satellite_data"]["parameters"]
-sat_df = pd.DataFrame({
-    "Pollutant": ["NO₂ Column Density", "Aerosol Index"],
-    "Value": [sat["no2_column_density"]["value"], sat["aerosol_index"]["value"]],
-    "Unit": [sat["no2_column_density"]["unit"], sat["aerosol_index"]["unit"]]
-})
-
-st.subheader("🛰 Satellite Measurements (TEMPO)")
-st.dataframe(sat_df)
-
-# Satellite bar chart
-fig2 = px.bar(
-    sat_df,
-    x="Pollutant",
-    y="Value",
-    color="Pollutant",
-    text="Value",
-    labels={"Value": "Measurement"},
-    title="Satellite Observations"
-)
-st.plotly_chart(fig2, use_container_width=True)
-
-# --- Map ---
-st.subheader("🗺 Location Map")
-lat = data["location"]["coordinates"]["latitude"]
-lon = data["location"]["coordinates"]["longitude"]
-
-map_df = pd.DataFrame({
-    "lat": [lat],
-    "lon": [lon],
-    "AQI": [aq_index]
-})
-
-st.map(map_df)
-
-# --- Alerts ---
-st.subheader("⚠ Alerts")
-alerts = data["combined_analysis"].get("alerts", [])
-if alerts:
-    for alert in alerts:
-        st.warning(f"{alert['type']}: {alert['message']}")
-else:
-    st.success("No alerts at this time.")
-
-# --- Air Quality Forecast ---
-def plot_air_quality_forecast():
-    with open("data/sample_data2.json", "r") as f:
-        data = json.load(f)
-    hours = [entry["hour"] for entry in data]
-    pm25 = [entry["pm25"] for entry in data]
-    pm10 = [entry["pm10"] for entry in data]
-    aqi = [entry["aqi"] for entry in data]
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=hours, y=pm25, mode='lines+markers', name='PM2.5'))
-    fig.add_trace(go.Scatter(x=hours, y=pm10, mode='lines+markers', name='PM10'))
-    fig.add_trace(go.Scatter(x=hours, y=aqi, mode='lines+markers', name='AQI'))
-    fig.update_layout(
-        title="24-Hour Air Quality Forecast",
-        xaxis_title="Hour",
-        yaxis_title="Value",
-        legend_title="Metric",
-        template="plotly_white"
+with col1:
+    latitude = st.number_input("Latitude", value=13.74433, format="%.5f")
+with col2:
+    longitude = st.number_input("Longitude", value=100.54365, format="%.5f")
+with col3:
+    radius = st.number_input(
+        "Search Radius (meters)",
+        value=10000,
+        min_value=1000,
+        max_value=100000,
+        step=1000,
     )
-    st.plotly_chart(fig)
 
-plot_air_quality_forecast()
+if st.button("Search Locations"):
+    locations = get_locations_by_coord(x=latitude, y=longitude, radius=radius)
+    if locations:
+        st.session_state.locations = locations
+        st.session_state.selected_location = None
+    else:
+        st.error("No locations found in the specified radius")
+
+# --- Location Selection ---
+if "locations" in st.session_state:
+    st.subheader("📍 Available Locations")
+    location_options = {
+        f"{loc.name} ({loc.id})": loc for loc in st.session_state.locations
+    }
+    selected_location_name = st.selectbox(
+        "Select a location",
+        options=list(location_options.keys()),
+        key="location_selector",
+    )
+
+    if selected_location_name:
+        selected_location = location_options[selected_location_name]
+        st.session_state.selected_location = selected_location
+
+        # Get ground data for selected location
+        ground_data = get_ground_data_by_location_id(
+            selected_location.id, include_predictions=False
+        )
+
+        # --- Display location info ---
+        st.subheader(f"📍 {selected_location.name}")
+        st.write(f"Last Updated: {selected_location.last_updated}")
+
+        if ground_data.parameters:
+            # Prepare ground data for display
+            ground_measurements = []
+            for param_name, measurement in ground_data.parameters.items():
+                ground_measurements.append(
+                    {
+                        "Pollutant": param_name,
+                        "Value": measurement.value,
+                        "Unit": measurement.unit,
+                        "Sensor": measurement.sensor_name,
+                    }
+                )
+
+            ground_df = pd.DataFrame(ground_measurements)
+
+            st.subheader("📊 Ground Measurements (OpenAQ)")
+            st.dataframe(ground_df)
+
+            # Bar chart
+            if not ground_df.empty:
+                fig = px.bar(
+                    ground_df,
+                    x="Pollutant",
+                    y="Value",
+                    color="Pollutant",
+                    text="Value",
+                    labels={"Value": "Concentration"},
+                    title="Ground-level Air Pollutants",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No recent measurements available for this location")
+
+        # --- Map ---
+        st.subheader("🗺 Location Map")
+        map_df = pd.DataFrame(
+            {
+                "lat": [selected_location.latitude],
+                "lon": [selected_location.longitude],
+                "Location": [selected_location.name],
+            }
+        )
+
+        st.map(map_df)
+
+        # --- Sensor Info ---
+        # Ensure selected_location is defined before accessing it
+        if (
+            "selected_location" in st.session_state
+            and st.session_state.selected_location
+        ):
+            selected_location = st.session_state.selected_location
+
+            st.subheader("📡 Available Sensors")
+            for sensor in selected_location.available_sensors:
+                st.write(f"- {sensor.name} (ID: {sensor.id})")
+        else:
+            st.warning(
+                "No location selected. Please select a location to view sensors."
+            )
+
+        # --- Prediction Section ---
+        if (
+            "selected_location" in st.session_state
+            and st.session_state.selected_location
+        ):
+            selected_location = st.session_state.selected_location
+
+            st.subheader("📈 Air Quality Predictions")
+
+            # Example: Predict for PM2.5
+            historical_data = pd.DataFrame(
+                {  # Replace with actual historical data fetching
+                    "timestamp": pd.date_range(
+                        start="2025-10-01", periods=24, freq="H"
+                    ),
+                    "value": [i + (i % 5) for i in range(24)],
+                }
+            )
+
+            prediction = predictor.predict_parameter_from_data(
+                historical_data=historical_data,
+                parameter_name="pm25",
+                parameter_unit="µg/m³",
+                forecast_hours=24,
+            )
+
+            if prediction:
+                # Prepare prediction data for display
+                prediction_df = pd.DataFrame(
+                    {
+                        "Timestamp": [p.timestamp for p in prediction.predictions],
+                        "Predicted Value": [
+                            p.predicted_value for p in prediction.predictions
+                        ],
+                        "Lower Bound": [p.lower_bound for p in prediction.predictions],
+                        "Upper Bound": [p.upper_bound for p in prediction.predictions],
+                    }
+                )
+
+                st.dataframe(prediction_df)
+
+                # Plot predictions
+                fig = px.line(
+                    prediction_df,
+                    x="Timestamp",
+                    y="Predicted Value",
+                    error_y="Upper Bound",
+                    error_y_minus="Lower Bound",
+                    title="Predicted PM2.5 Levels",
+                    labels={"Predicted Value": "Concentration (µg/m³)"},
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.warning("Unable to generate predictions due to insufficient data.")
