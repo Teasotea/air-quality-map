@@ -5,7 +5,8 @@ from dateutil import parser
 from openaq import OpenAQ
 
 from api.database import db
-from api.models import Location, Sensor
+from api.models import GroundData, Location, ParameterMeasurementWithPrediction, Sensor
+from api.predictions import AirQualityPredictor
 
 
 def exctact_datetime(location) -> datetime | None:
@@ -52,23 +53,28 @@ def get_ground_data_by_location_id(
     location_id: int,
     datetime_from: str | None = None,
     datetime_to: str | None = None,
-    limit: int = 100,
-) -> dict[str, str | int | dict]:
+    limit: int = 1000,  # Increased to get more historical data
+    include_predictions: bool = True,
+    forecast_hours: int = 24,
+) -> GroundData:
     """
-    Get ground sensor measurements for a location from OpenAQ API.
+    Get ground sensor measurements for a location from OpenAQ API with predictions.
 
     Args:
         location_id: The ID of the location to get measurements for
-        datetime_from: Start datetime in ISO format (defaults to 24 hours ago)
+        datetime_from: Start datetime in ISO format (defaults to 30 days ago for predictions)
         datetime_to: End datetime in ISO format (defaults to now)
         limit: Maximum number of measurements per sensor
+        include_predictions: Whether to include 24-hour forecasts
+        forecast_hours: Number of hours to forecast (default: 24)
 
     Returns:
-        Dictionary formatted similar to sample_data.json ground_data structure
+        GroundData object with measurements and optional predictions
     """
-    # Set default time range if not provided
+    # Set default time range - longer period if predictions are needed
     if datetime_from is None:
-        datetime_from = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+        days_back = 30 if include_predictions else 1
+        datetime_from = (datetime.now(UTC) - timedelta(days=days_back)).isoformat()
     if datetime_to is None:
         datetime_to = datetime.now(UTC).isoformat()
 
@@ -76,14 +82,21 @@ def get_ground_data_by_location_id(
     sensors = db.get_sensors_by_location(location_id)
 
     if not sensors:
-        return {
-            "source": "OpenAQ",
-            "parameters": {},
-            "message": f"No sensors found for location ID {location_id}",
-        }
+        return GroundData(
+            source="OpenAQ",
+            parameters={},
+            datetime_from=datetime_from,
+            datetime_to=datetime_to,
+            sensors_count=0,
+            measurements_found=0,
+            message=f"No sensors found for location ID {location_id}",
+        )
 
     # Dictionary to store parameters with their latest measurements
     parameters = {}
+
+    # Initialize predictor if predictions are requested
+    predictor = AirQualityPredictor(client) if include_predictions else None
 
     # Get measurements for each sensor
     for sensor in sensors:
@@ -105,13 +118,35 @@ def get_ground_data_by_location_id(
                 parameter_units = latest_measurement.parameter.units
                 parameter_value = latest_measurement.value
 
-                parameters[parameter_name] = {
-                    "value": parameter_value,
-                    "unit": parameter_units,
-                    "sensor_id": sensor.id,
-                    "sensor_name": sensor.name,
-                    "timestamp": latest_measurement.period.datetime_to.utc,
-                }
+                # Generate prediction if requested
+                prediction = None
+                if predictor:
+                    try:
+                        # Convert measurements to DataFrame for prediction
+                        historical_df = predictor.measurements_to_dataframe(
+                            measurements_response
+                        )
+
+                        # Generate prediction from the historical data
+                        prediction = predictor.predict_parameter_from_data(
+                            historical_data=historical_df,
+                            parameter_name=parameter_name,
+                            parameter_unit=parameter_units,
+                            forecast_hours=forecast_hours,
+                        )
+                    except Exception as pred_error:
+                        print(
+                            f"Failed to generate prediction for sensor {sensor.id}: {pred_error}"
+                        )
+
+                parameters[parameter_name] = ParameterMeasurementWithPrediction(
+                    value=parameter_value,
+                    unit=parameter_units,
+                    sensor_id=sensor.id,
+                    sensor_name=sensor.name,
+                    timestamp=latest_measurement.period.datetime_to.utc,
+                    prediction=prediction,
+                )
 
         except Exception as e:
             # Log error but continue with other sensors
@@ -120,11 +155,11 @@ def get_ground_data_by_location_id(
             )
             continue
 
-    return {
-        "source": "OpenAQ",
-        "parameters": parameters,
-        "datetime_from": datetime_from,
-        "datetime_to": datetime_to,
-        "sensors_count": len(sensors),
-        "measurements_found": len(parameters),
-    }
+    return GroundData(
+        source="OpenAQ",
+        parameters=parameters,
+        datetime_from=datetime_from,
+        datetime_to=datetime_to,
+        sensors_count=len(sensors),
+        measurements_found=len(parameters),
+    )
