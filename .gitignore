@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Python
 __pycache__/
 *.py[cod]
@@ -55,7 +54,6 @@ build/
 research/*.csv
 research/*.fits
 research/*.h5
-=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -275,4 +273,3 @@ __marimo__/
 
 tmp/
 air_quality.db
->>>>>>> 95f8a62 (feat: openaq integration)
