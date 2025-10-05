@@ -3,6 +3,7 @@ import plotly.express as px
 import streamlit as st
 from dotenv import load_dotenv
 
+from api.database import AirQualityDB
 from api.locations import get_ground_data_by_location_id, get_locations_by_coord
 from api.predictions import AirQualityPredictor
 
@@ -15,6 +16,9 @@ st.title("🌍 Air Quality Dashboard (OpenAQ)")
 
 # Initialize the predictor
 predictor = AirQualityPredictor(client=None)  # Pass the OpenAQ client if needed
+
+# Initialize the database
+AirQualityDB(db_path="air_quality.db")
 
 # --- Location Search ---
 st.subheader("🔍 Search Location")
