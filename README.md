@@ -12,7 +12,7 @@ The platform helps users understand their local air quality, receive forecasts s
 
 Our goal is to bridge **satellite Earth observation data** and **everyday public awareness**, transforming complex data into actionable insights for citizens, policymakers, and educators.
 
-![airvision_demo](https://drive.google.com/file/d/1pfhAILsnZ9_88nBgpyKjOmUrvRXHf4vZ/view)
+Demo: https://drive.google.com/file/d/1pfhAILsnZ9_88nBgpyKjOmUrvRXHf4vZ/view
 
 ---
 
